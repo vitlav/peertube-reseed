@@ -1,0 +1,31 @@
+{
+  "name": "peertube-reseed-js",
+  "version": "0.0.1",
+  "description": "Reseed the top videos of a given peertube instance",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://gitlab.com/NamingThingsIsHard/media_tools/peertube-reseed-js.git"
+  },
+  "keywords": [
+    "peertube",
+    "webtorrent",
+    "cli",
+    "reseed"
+  ],
+  "author": "LoveIsGrief",
+  "license": "GPL-3.0-or-later",
+  "bugs": {
+    "url": "https://gitlab.com/NamingThingsIsHard/media_tools/peertube-reseed-js/issues"
+  },
+  "homepage": "https://gitlab.com/NamingThingsIsHard/media_tools/peertube-reseed-js#readme",
+  "dependencies": {
+    "commander": "^7.0.0",
+    "got": "^11.8.1",
+    "webtorrent": "^0.112.1",
+    "webtorrent-hybrid": "^4.0.3"
+  }
+}
