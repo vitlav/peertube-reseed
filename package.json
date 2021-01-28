@@ -2,10 +2,12 @@
   "name": "peertube-reseed-js",
   "version": "0.0.1",
   "description": "Reseed the top videos of a given peertube instance",
-  "main": "index.js",
+  "bin": {
+    "peertube-reseed": "./index.js"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node index.js"
+    "start": "./index.js"
   },
   "repository": {
     "type": "git",
