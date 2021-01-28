@@ -1,4 +1,9 @@
 #!/usr/bin/env node
+// peertube-reseed-js  Copyright (C) 2021  LoveIsGrief
+// This program comes with ABSOLUTELY NO WARRANTY; for details type `show w'.
+// This is free software, and you are welcome to redistribute it
+// under certain conditions; type `show c' for details.
+
 const {program} = require('commander');
 const {main} = require("./lib/main");
 
