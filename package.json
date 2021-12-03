@@ -28,7 +28,7 @@
   "dependencies": {
     "commander": "^7.0.0",
     "got": "^11.8.1",
-    "webtorrent": "^0.112.1",
-    "webtorrent-hybrid": "^4.0.3"
+    "webtorrent": "^1.5.8",
+    "webtorrent-hybrid": "^1.0.6"
   }
 }
