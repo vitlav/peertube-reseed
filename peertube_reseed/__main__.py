@@ -5,12 +5,14 @@
 import logging
 import shutil
 import signal
+import tempfile
 import time
 from argparse import ArgumentParser
 from pathlib import Path
 from typing import List
 
 import libtorrent as lt
+import requests
 from requests import Session
 from requests_toolbelt.sessions import BaseUrlSession
 
@@ -36,10 +38,26 @@ def main(count: int, target_server: str, download_path: Path):
         video_download_paths.add(video_download_path)
 
         for file in video["files"]:
+            torrent_url = file.get("torrentDownloadUrl")
+            if not torrent_url:
+                logging.warning("No torrent URL for %s", file)
+                continue
+            try:
+                # libtorrent doesn't support downloading the file for us so we do it ourselves
+                torrent_path = download_file(torrent_url)
+            except Exception as e:
+                logging.error("Couldn't download torrent from %s : %s", torrent_url, e)
+                continue
+
             file_dir_download_path = video_download_path / file["resolution"]["label"]
-            add_torrent_params = lt.parse_magnet_uri(file["magnetUri"])
-            add_torrent_params.save_path = str(file_dir_download_path)
-            torrents.append(torrent_session.add_torrent(add_torrent_params))
+            torrents.append(
+                torrent_session.add_torrent(
+                    {
+                        "ti": lt.torrent_info(str(torrent_path)),
+                        "save_path": str(file_dir_download_path)
+                    }
+                )
+            )
 
     # Clean up old downloads
     for oldPath in (old_paths - video_download_paths):
@@ -75,6 +93,17 @@ def main(count: int, target_server: str, download_path: Path):
                 logging.warning(alert)
 
         time.sleep(1)
+
+
+def download_file(url: str) -> Path:
+    response = requests.get(url)
+    response.raise_for_status()
+
+    temp_dir = Path(tempfile.mkdtemp())
+    torrent_file_path = (temp_dir / "torrent")
+    torrent_file_path.write_bytes(response.content)
+
+    return torrent_file_path
 
 
 def list_dirs(directory: Path) -> List[Path]:
