@@ -13,9 +13,15 @@ This tool will act as another seed for the video.
 
 # Start
 
+This script uses [`libtorrent`][libtorrent] which (at the time of writing) only has webtorrent support 
+ on the `master` branch.
+I can't be bothered writing a script to install libtorrent requirements and build it --> docker to the rescue.
+The docker image builds upon [libtorrent-docker].
+
 ```shell
+$ docker pull registry.gitlab.com/namingthingsishard/net/torrent/libtorrent-docker
+$ alias peertube-reseed='docker run --rm registry.gitlab.com/namingthingsishard/media_tools/peertube-reseed-js'
 # Install command globally
-$ npm install -g
 $ peertube-reseed --help
 Usage: peertube-reseed [options] <targetServer>
 
@@ -37,12 +43,14 @@ Options:
 
 # Development
 
-You will need the node version defined in `.nvmrc`. 
-It's the one the project's been tested with.
+I'm not going to bother with non-docker stuff, since I haven't tested it.
+If someone wants to contribute a `default.nix`, feel free to.
 
-Node can easily be installed with wth Node Version Manager [nvm]
+You can make modifications to `peertube_reseed/__main__.py` and run 
+`docker-compose up --no-log-prefix`.
+You can pass other commands to the script e.g
+`docker-compose run --rm reseed https://tilvids.com`
 
-Then run `npm install` and you're ready to go.
 
-
-[nvm]: https://github.com/creationix/nvm
+[libtorrent]: https://libtorrent.org/
+[libtorrent-docker]: https://gitlab.com/NamingThingsIsHard/net/torrent/libtorrent-docker/
