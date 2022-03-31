@@ -1,4 +1,4 @@
-`peertube-reseed-js` is an attempt at writing a... well... reseeder for peertube.
+`peertube-reseed` is an attempt at writing a... well... reseeder for peertube.
 
 It reseeds a given number of trending videos.
 
@@ -20,7 +20,7 @@ The docker image builds upon [libtorrent-docker].
 
 ```shell
 $ docker pull registry.gitlab.com/namingthingsishard/net/torrent/libtorrent-docker
-$ alias peertube-reseed='docker run --rm registry.gitlab.com/namingthingsishard/media_tools/peertube-reseed-js'
+$ alias peertube-reseed='docker run --rm registry.gitlab.com/namingthingsishard/media_tools/peertube-reseed'
 # Install command globally
 $ peertube-reseed --help
 Usage: peertube-reseed [options] <targetServer>
