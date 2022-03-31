@@ -118,12 +118,12 @@ def get_videos(client: Session, count: int) -> list:
 
     # Try to fill up the video_ids
     # sometimes trending might not have enough videos
-    sort_strings = ["views", "likes", "trending"]
+    sort_strings = ["trending", "views", "likes"]
     while len(video_ids) < count and len(sort_strings) > 0:
         sort = sort_strings.pop()
         result = client.get(
             "videos", params={
-                "sort": sort,
+                "sort": f"-{sort}",
                 # nsfw: true,
                 "count": count,
             }
