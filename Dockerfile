@@ -1,22 +1,15 @@
-FROM node:16-slim as base
+FROM registry.gitlab.com/namingthingsishard/net/torrent/libtorrent-docker
 
 WORKDIR /app
 
 RUN apt-get update -qq \
-    && apt-get install -yqq \
-        xvfb \
-        chromium \
-        git
+    && apt-get install -y --no-install-recommends \
+        python3-pip \
+    && rm -rf /var/cache/apt /var/lib/apt/lists/*
 
-COPY package*.json ./
-RUN npm install --no-dev
+COPY requirements.txt ./
+RUN pip3 install -r requirements.txt
 
-ENTRYPOINT [ "npm", "start" ]
-
-FROM base as prod
+ENTRYPOINT ["python3", "-m", "peertube_reseed"]
 
 COPY .  ./
-
-FROM base as dev
-
-RUN npm install
