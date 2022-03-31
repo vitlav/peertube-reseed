@@ -140,6 +140,7 @@ def get_videos(client: Session, count: int) -> list:
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     parser = ArgumentParser(prog="peertube-reseed")
+    parser.add_argument("--version", help="Print the version number", action='version', version='%(prog)s 0.0.1')
     parser.add_argument("-c", "--count", help="Number of videos to reseed", type=int, default=10)
     parser.add_argument(
         "-d", "--download-path", help="Download dir of all videos", type=Path, default=Path("/tmp/peertube-reseed/")
