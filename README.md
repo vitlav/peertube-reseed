@@ -19,7 +19,7 @@ I can't be bothered writing a script to install libtorrent requirements and buil
 The docker image builds upon [libtorrent-docker].
 
 ```shell
-$ docker pull registry.gitlab.com/namingthingsishard/net/torrent/libtorrent-docker
+$ docker pull registry.gitlab.com/namingthingsishard/media_tools/peertube-reseed
 $ alias peertube-reseed='docker run --rm registry.gitlab.com/namingthingsishard/media_tools/peertube-reseed'
 # Install command globally
 $ peertube-reseed --help
