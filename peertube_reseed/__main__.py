@@ -5,11 +5,15 @@
 import argparse
 import libtorrent as lt
 import logging
+import operator
 import shutil
 import signal
 import tempfile
 import time
+import typing
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
+from collections import OrderedDict
+from io import TextIOBase
 from pathlib import Path
 from time import sleep
 from typing import List
@@ -17,6 +21,7 @@ from typing import List
 import requests
 from requests import Session
 from requests_toolbelt.sessions import BaseUrlSession
+from tabulate import tabulate
 
 CALLS_PER_SECOND = 2.5
 """For rate limiting"""
@@ -28,14 +33,30 @@ SORT_OPTIONS = [
 ]
 """Which sort of video the user can pick to reseed"""
 
+OUTPUT_HEADERS: typing.OrderedDict[
+    str,
+    typing.Callable[[lt.torrent_status], typing.Union[str, int]]
+] = OrderedDict(
+    [
+        ("Path", operator.attrgetter("save_path")),
+        ("State", lambda status: str(status.state)),
+        ("Peers", operator.attrgetter("num_peers")),
+        ("Progress %", lambda status: status.progress * 100),
+        ("Down kB/s", lambda status: status.download_rate / 1000),
+        ("Up kB/s", lambda status: status.upload_rate / 1000),
+    ]
+)
+
 
 def main(
         count: int,
         target_server: str,
         download_path: Path,
         active_downloads: int = 3,
+        output_file: TextIOBase = None,
         sorts: List[str] = None,
 ):
+    output_file = output_file or open("/dev/stderr", mode="w")
     client = BaseUrlSession(f"{target_server}/api/v1/", )
     client.headers["User-Agent"] = "peertube-reseed v0.0.1"
 
@@ -97,21 +118,16 @@ def main(
 
     signal.signal(signal.SIGINT, stop)
 
+    logging.info("Looping...")
+    if output_file.seekable():
+        logging.info("Read %s for more detailed progress", output_file.name)
     # Download and seed until Ctrl+C
     while True:
         if "should_stop" in d:
             logging.info("Stopping...")
             break
 
-        for torrent in torrents:
-            status = torrent.status()
-            print(
-                '%s+ %.2f%% complete (down: %.1f kB/s up: %.1f kB/s peers: %d) %s' % (
-                    status.save_path,
-                    status.progress * 100, status.download_rate / 1000, status.upload_rate / 1000,
-                    status.num_peers, status.state),
-                flush=True
-            )
+        output_status(torrents, output_file)
 
         # Print errors
         alerts = torrent_session.pop_alerts()
@@ -175,6 +191,29 @@ def get_videos(client: Session, count: int, sorts: List[str] = None) -> list:
     return videos
 
 
+def output_status(torrents: List[lt.torrent_handle], output_file: TextIOBase):
+    # Generate rows from ordered headers and their getter functions
+    torrent_stati = []
+    for torrent in torrents:
+        status: lt.torrent_status = torrent.status()
+        torrent_stati.append(
+            [
+                getter(status)
+                for getter in OUTPUT_HEADERS.values()
+            ]
+        )
+
+    # The file handle stays open, so we can't just keep appending
+    # Some files however are append-only e.g stderr
+    if output_file.seekable():
+        output_file.truncate(0)
+
+    output_file.write(tabulate(torrent_stati, list(OUTPUT_HEADERS.keys())))
+    output_file.write("\n")  # Append only files would otherwise mess up the first header line
+
+    output_file.flush()
+
+
 class CommaSeparatedOption(object):
     def __init__(self, options: List[str]):
         self.options = options
@@ -184,7 +223,7 @@ class CommaSeparatedOption(object):
         for separated in string.split(","):
             separated = separated.strip()
             if separated not in self.options:
-                raise argparse.ArgumentTypeError("%s is not allowed")
+                raise argparse.ArgumentTypeError("Option is not allowed")
             result.append(separated)
 
         return result
@@ -218,6 +257,12 @@ if __name__ == "__main__":
         default=10
     )
     parser.add_argument(
+        "-o", "--output",
+        help="Provide a file path to where the progress will be output. (default: /dev/stderr)",
+        type=argparse.FileType("w"),
+        default=argparse.SUPPRESS
+    )
+    parser.add_argument(
         "-d", "--download-path", help="Download dir of all videos", type=Path, default=Path("/tmp/peertube-reseed/")
     )
     parser.add_argument("target_server", help="Which server to help reseed trending videos")
@@ -227,5 +272,6 @@ if __name__ == "__main__":
     main(
         args.count, args.target_server, args.download_path,
         active_downloads=args.active_downloads,
-        sorts=args.sorts
+        sorts=args.sorts,
+        output_file=getattr(args, "output", None),
     )
