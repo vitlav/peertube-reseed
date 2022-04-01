@@ -3,6 +3,7 @@
 # This is free software, and you are welcome to redistribute it
 # under certain conditions type `show c' for details.
 import argparse
+import libtorrent as lt
 import logging
 import shutil
 import signal
@@ -13,16 +14,19 @@ from pathlib import Path
 from time import sleep
 from typing import List
 
-import libtorrent as lt
 import requests
 from requests import Session
 from requests_toolbelt.sessions import BaseUrlSession
+
+CALLS_PER_SECOND = 2.5
+"""For rate limiting"""
 
 SORT_OPTIONS = [
     "trending",
     "likes",
     "views",
 ]
+"""Which sort of video the user can pick to reseed"""
 
 
 def main(
@@ -158,14 +162,14 @@ def get_videos(client: Session, count: int, sorts: List[str] = None) -> list:
         spliced = data[:min(len(data), count)]
         video_ids.extend([video["id"] for video in spliced])
 
-    logging.info("Downloading video information at %s calls per second")
+    logging.info("Downloading video information at %s calls per second", CALLS_PER_SECOND)
     videos = []
     for i, _id in enumerate(video_ids, start=1):
         videos.append(client.get(f"videos/{_id}").json())
 
         # Don't pass the rate limit of 5 calls per second
         # Be safe and limit to 2.5 per second
-        sleep(0.4)
+        sleep(1 / CALLS_PER_SECOND)
         logging.info("video info: %s/%s", i, len(video_ids))
 
     return videos
