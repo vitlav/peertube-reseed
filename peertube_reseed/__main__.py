@@ -17,7 +17,12 @@ from requests import Session
 from requests_toolbelt.sessions import BaseUrlSession
 
 
-def main(count: int, target_server: str, download_path: Path):
+def main(
+        count: int,
+        target_server: str,
+        download_path: Path,
+        active_downloads: int = 3
+):
     client = BaseUrlSession(f"{target_server}/api/v1/", )
     client.headers["User-Agent"] = "peertube-reseed v0.0.1"
 
@@ -59,7 +64,7 @@ def main(count: int, target_server: str, download_path: Path):
     # Create a session that can download and seed all the torrents
     torrent_session = lt.session(
         {
-            "active_downloads": count,
+            "active_downloads": active_downloads,
             "active_seeds": len(torrent_params),
             "active_limit": len(torrent_params),
         }
@@ -149,6 +154,13 @@ if __name__ == "__main__":
     parser = ArgumentParser(prog="peertube-reseed")
     parser.add_argument("--version", help="Print the version number", action='version', version='%(prog)s 0.0.1')
     parser.add_argument(
+        "--active-downloads",
+        help="Number torrents to download at the same time. Each torrent has one video file in a specific resolution. "
+             "A video can thus have individual torrents for 360p,480p, 1080p",
+        type=int,
+        default=3
+    )
+    parser.add_argument(
         "-c", "--count",
         help="Number of videos to reseed. "
              "Keep in mind that videos have multiple files for each resolution they are encoded in",
@@ -162,4 +174,4 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    main(args.count, args.target_server, args.download_path)
+    main(args.count, args.target_server, args.download_path, active_downloads=args.active_downloads)
