@@ -235,7 +235,7 @@ if __name__ == "__main__":
         prog="peertube-reseed",
         formatter_class=ArgumentDefaultsHelpFormatter
     )
-    parser.add_argument("--version", help="Print the version number", action='version', version='%(prog)s 0.0.2')
+    parser.add_argument("--version", help="Print the version number", action='version', version='%(prog)s 0.1.0')
     parser.add_argument(
         "-s", "--sorts",
         help="Which sort of video to reseed, in descending priority. Allowed options %s" % ",".join(SORT_OPTIONS),
