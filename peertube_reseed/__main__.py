@@ -9,6 +9,7 @@ import tempfile
 import time
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from pathlib import Path
+from time import sleep
 from typing import List
 
 import libtorrent as lt
@@ -149,7 +150,17 @@ def get_videos(client: Session, count: int) -> list:
         spliced = data[:min(len(data), count)]
         video_ids.extend([video["id"] for video in spliced])
 
-    return [client.get(f"videos/{_id}").json() for _id in video_ids]
+    logging.info("Downloading video information at %s calls per second")
+    videos = []
+    for i, _id in enumerate(video_ids, start=1):
+        videos.append(client.get(f"videos/{_id}").json())
+
+        # Don't pass the rate limit of 5 calls per second
+        # Be safe and limit to 2.5 per second
+        sleep(0.4)
+        logging.info("video info: %s/%s", i, len(video_ids))
+
+    return videos
 
 
 if __name__ == "__main__":
