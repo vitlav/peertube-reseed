@@ -2,6 +2,7 @@
 # This program comes with ABSOLUTELY NO WARRANTY for details type `show w'.
 # This is free software, and you are welcome to redistribute it
 # under certain conditions type `show c' for details.
+import argparse
 import logging
 import shutil
 import signal
@@ -17,17 +18,24 @@ import requests
 from requests import Session
 from requests_toolbelt.sessions import BaseUrlSession
 
+SORT_OPTIONS = [
+    "trending",
+    "likes",
+    "views",
+]
+
 
 def main(
         count: int,
         target_server: str,
         download_path: Path,
-        active_downloads: int = 3
+        active_downloads: int = 3,
+        sorts: List[str] = None,
 ):
     client = BaseUrlSession(f"{target_server}/api/v1/", )
     client.headers["User-Agent"] = "peertube-reseed v0.0.1"
 
-    videos = get_videos(client, count)
+    videos = get_videos(client, count, sorts)
 
     # Keep track of the old downloads
     logging.info("Creating target directory %s", download_path)
@@ -128,12 +136,12 @@ def list_dirs(directory: Path) -> List[Path]:
     return [path for path in directory.iterdir() if path.is_dir()]
 
 
-def get_videos(client: Session, count: int) -> list:
+def get_videos(client: Session, count: int, sorts: List[str] = None) -> list:
     video_ids = []
 
     # Try to fill up the video_ids
     # sometimes trending might not have enough videos
-    sort_strings = ["trending", "views", "likes"]
+    sort_strings = list(reversed(sorts if sorts else SORT_OPTIONS))
     while len(video_ids) < count and len(sort_strings) > 0:
         sort = sort_strings.pop()
         result = client.get(
@@ -163,6 +171,21 @@ def get_videos(client: Session, count: int) -> list:
     return videos
 
 
+class CommaSeparatedOption(object):
+    def __init__(self, options: List[str]):
+        self.options = options
+
+    def __call__(self, string: str) -> List[str]:
+        result = []
+        for separated in string.split(","):
+            separated = separated.strip()
+            if separated not in self.options:
+                raise argparse.ArgumentTypeError("%s is not allowed")
+            result.append(separated)
+
+        return result
+
+
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     parser = ArgumentParser(
@@ -170,6 +193,12 @@ if __name__ == "__main__":
         formatter_class=ArgumentDefaultsHelpFormatter
     )
     parser.add_argument("--version", help="Print the version number", action='version', version='%(prog)s 0.0.1')
+    parser.add_argument(
+        "-s", "--sorts",
+        help="Which sort of video to reseed, in descending priority. Allowed options %s" % ",".join(SORT_OPTIONS),
+        type=CommaSeparatedOption(SORT_OPTIONS),
+        default=SORT_OPTIONS
+    )
     parser.add_argument(
         "--active-downloads",
         help="Number torrents to download at the same time. Each torrent has one video file in a specific resolution. "
@@ -191,4 +220,8 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    main(args.count, args.target_server, args.download_path, active_downloads=args.active_downloads)
+    main(
+        args.count, args.target_server, args.download_path,
+        active_downloads=args.active_downloads,
+        sorts=args.sorts
+    )
