@@ -2,6 +2,10 @@
 
 It reseeds a given number of trending videos.
 
+# Compatibility
+
+The server version must be >= 4.0
+
 # Why ?
 
 Instances are often hosted by people without the funds of a large company

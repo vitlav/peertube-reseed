@@ -62,11 +62,13 @@ def main(
             )
 
     # Create a session that can download and seed all the torrents
+    file_count = len(torrent_params)
+    logging.info("Files to download: %s", file_count)
     torrent_session = lt.session(
         {
             "active_downloads": active_downloads,
-            "active_seeds": len(torrent_params),
-            "active_limit": len(torrent_params),
+            "active_seeds": file_count,
+            "active_limit": file_count,
         }
     )
     torrents = [torrent_session.add_torrent(torrent_param) for torrent_param in torrent_params]
@@ -138,6 +140,7 @@ def get_videos(client: Session, count: int) -> list:
                 "sort": f"-{sort}",
                 # nsfw: true,
                 "count": count,
+                "hasWebtorrentFiles": True
             }
         ).json()
 
