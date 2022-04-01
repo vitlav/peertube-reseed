@@ -7,7 +7,7 @@ import shutil
 import signal
 import tempfile
 import time
-from argparse import ArgumentParser
+from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from pathlib import Path
 from typing import List
 
@@ -151,7 +151,10 @@ def get_videos(client: Session, count: int) -> list:
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    parser = ArgumentParser(prog="peertube-reseed")
+    parser = ArgumentParser(
+        prog="peertube-reseed",
+        formatter_class=ArgumentDefaultsHelpFormatter
+    )
     parser.add_argument("--version", help="Print the version number", action='version', version='%(prog)s 0.0.1')
     parser.add_argument(
         "--active-downloads",
