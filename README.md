@@ -27,8 +27,9 @@ $ docker pull registry.gitlab.com/namingthingsishard/media_tools/peertube-reseed
 $ alias peertube-reseed='docker run --rm registry.gitlab.com/namingthingsishard/media_tools/peertube-reseed'
 # Install command globally
 $ peertube-reseed --help
-usage: peertube-reseed [-h] [--version] [--active-downloads ACTIVE_DOWNLOADS]
-                       [-c COUNT] [-d DOWNLOAD_PATH]
+usage: peertube-reseed [-h] [--version] [-s SORTS]
+                       [--active-downloads ACTIVE_DOWNLOADS] [-c COUNT]
+                       [-o OUTPUT] [-d DOWNLOAD_PATH]
                        target_server
 
 positional arguments:
@@ -37,6 +38,10 @@ positional arguments:
 optional arguments:
   -h, --help            show this help message and exit
   --version             Print the version number
+  -s SORTS, --sorts SORTS
+                        Which sort of video to reseed, in descending priority.
+                        Allowed options trending,likes,views (default:
+                        ['trending', 'likes', 'views'])
   --active-downloads ACTIVE_DOWNLOADS
                         Number torrents to download at the same time. Each
                         torrent has one video file in a specific resolution. A
@@ -46,9 +51,17 @@ optional arguments:
                         Number of videos to reseed. Keep in mind that videos
                         have multiple files for each resolution they are
                         encoded in (default: 10)
+  -o OUTPUT, --output OUTPUT
+                        Provide a file path to where the progress will be
+                        output. (default: /dev/stderr)
   -d DOWNLOAD_PATH, --download-path DOWNLOAD_PATH
                         Download dir of all videos (default: /tmp/peertube-
                         reseed)
+peertube-reseed-js_reseed_1 exited with code 0
+Aborting on container exit...
+
+Process finished with exit code 0
+
 ```
 
 **Example**
