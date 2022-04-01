@@ -28,9 +28,8 @@ def main(count: int, target_server: str, download_path: Path):
     download_path.mkdir(parents=True, exist_ok=True)
     old_paths = set(list_dirs(download_path))
 
-    torrent_session = lt.session({'listen_interfaces': '0.0.0.0:6881'})
-    torrents = []
-    # Start new downloads
+    # Gather torrents to download
+    torrent_params = []
     video_download_paths = set()
     for video in videos:
         video_download_path = download_path / f"video-{video['id']}"
@@ -50,14 +49,22 @@ def main(count: int, target_server: str, download_path: Path):
                 continue
 
             file_dir_download_path = video_download_path / file["resolution"]["label"]
-            torrents.append(
-                torrent_session.add_torrent(
-                    {
-                        "ti": lt.torrent_info(str(torrent_path)),
-                        "save_path": str(file_dir_download_path)
-                    }
-                )
+            torrent_params.append(
+                {
+                    "ti": lt.torrent_info(str(torrent_path)),
+                    "save_path": str(file_dir_download_path)
+                }
             )
+
+    # Create a session that can download and seed all the torrents
+    torrent_session = lt.session(
+        {
+            "active_downloads": count,
+            "active_seeds": len(torrent_params),
+            "active_limit": len(torrent_params),
+        }
+    )
+    torrents = [torrent_session.add_torrent(torrent_param) for torrent_param in torrent_params]
 
     # Clean up old downloads
     for oldPath in (old_paths - video_download_paths):
@@ -141,7 +148,13 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     parser = ArgumentParser(prog="peertube-reseed")
     parser.add_argument("--version", help="Print the version number", action='version', version='%(prog)s 0.0.1')
-    parser.add_argument("-c", "--count", help="Number of videos to reseed", type=int, default=10)
+    parser.add_argument(
+        "-c", "--count",
+        help="Number of videos to reseed. "
+             "Keep in mind that videos have multiple files for each resolution they are encoded in",
+        type=int,
+        default=10
+    )
     parser.add_argument(
         "-d", "--download-path", help="Download dir of all videos", type=Path, default=Path("/tmp/peertube-reseed/")
     )
