@@ -5,55 +5,22 @@
 import argparse
 import libtorrent as lt
 import logging
-import operator
 import shutil
 import signal
-import tempfile
 import time
-import typing
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
-from collections import OrderedDict
 from io import TextIOBase
 from pathlib import Path
-from time import sleep
 from typing import List
 
-import requests
-from requests import Session
 from requests_toolbelt.sessions import BaseUrlSession
-from tabulate import tabulate
 
-CALLS_PER_SECOND = 2.5
-"""For rate limiting"""
-
-SORT_OPTIONS = [
-    "hot",
-    "trending",
-    "likes",
-    "views",
-    "createdAt",
-    "publishedAt",
-    "name",
-    "duration",
-]
-"""
-Which sort of video the user can pick to reseed
-List taken from https://docs.joinpeertube.org/api-rest-reference.html#operation/getVideos
-"""
-
-OUTPUT_HEADERS: typing.OrderedDict[
-    str,
-    typing.Callable[[lt.torrent_status], typing.Union[str, int]]
-] = OrderedDict(
-    [
-        ("Path", operator.attrgetter("save_path")),
-        ("State", lambda status: str(status.state)),
-        ("Peers", operator.attrgetter("num_peers")),
-        ("Progress %", lambda status: status.progress * 100),
-        ("Down kB/s", lambda status: status.download_rate / 1000),
-        ("Up kB/s", lambda status: status.upload_rate / 1000),
-    ]
-)
+from peertube_reseed.cli import CommaSeparatedOption
+from peertube_reseed.constants import SORT_OPTIONS
+from peertube_reseed.files import list_dirs
+from peertube_reseed.logs import output_status
+from peertube_reseed.videos import get_video_file_urls, get_video_stream_file_urls, get_videos
+from peertube_reseed.web import make_torrent_params
 
 
 def main(
@@ -83,25 +50,9 @@ def main(
         video_download_path.mkdir(parents=True, exist_ok=True)
         video_download_paths.add(video_download_path)
 
-        for file in video["files"]:
-            torrent_url = file.get("torrentDownloadUrl")
-            if not torrent_url:
-                logging.warning("No torrent URL for %s", file)
-                continue
-            try:
-                # libtorrent doesn't support downloading the file for us so we do it ourselves
-                torrent_path = download_file(torrent_url)
-            except Exception as e:
-                logging.error("Couldn't download torrent from %s : %s", torrent_url, e)
-                continue
-
-            file_dir_download_path = video_download_path / file["resolution"]["label"]
-            torrent_params.append(
-                {
-                    "ti": lt.torrent_info(str(torrent_path)),
-                    "save_path": str(file_dir_download_path)
-                }
-            )
+        torrent_params.extend(make_torrent_params(get_video_file_urls(video), video_download_path / "video"))
+        for playlist_id, urls in get_video_stream_file_urls(video).items():
+            torrent_params.extend(make_torrent_params(urls, video_download_path / ("playlist_%s" % playlist_id)))
 
     # Create a session that can download and seed all the torrents
     file_count = len(torrent_params)
@@ -144,98 +95,6 @@ def main(
                 logging.warning(alert)
 
         time.sleep(1)
-
-
-def download_file(url: str) -> Path:
-    response = requests.get(url)
-    response.raise_for_status()
-
-    temp_dir = Path(tempfile.mkdtemp())
-    torrent_file_path = (temp_dir / "torrent")
-    torrent_file_path.write_bytes(response.content)
-
-    return torrent_file_path
-
-
-def list_dirs(directory: Path) -> List[Path]:
-    """
-  List directories in the given directory
-  """
-    return [path for path in directory.iterdir() if path.is_dir()]
-
-
-def get_videos(client: Session, count: int, sorts: List[str] = None) -> list:
-    video_ids = []
-
-    # Try to fill up the video_ids
-    # sometimes trending might not have enough videos
-    sort_strings = list(reversed(sorts if sorts else SORT_OPTIONS))
-    while len(video_ids) < count and len(sort_strings) > 0:
-        sort = sort_strings.pop()
-        logging.info("Retrieving videos of sort: %s", sort)
-        result = client.get(
-            "videos", params={
-                "sort": f"-{sort}",
-                # nsfw: true,
-                "count": count,
-                "hasWebtorrentFiles": True
-            }
-        ).json()
-
-        # Add only the number of video_ids we need
-        data = result["data"]
-        spliced = data[:min(len(data), count)]
-        video_ids.extend([video["id"] for video in spliced])
-
-    logging.info("Downloading video information at %s calls per second", CALLS_PER_SECOND)
-    videos = []
-    for i, _id in enumerate(video_ids, start=1):
-        videos.append(client.get(f"videos/{_id}").json())
-
-        # Don't pass the rate limit of 5 calls per second
-        # Be safe and limit to 2.5 per second
-        sleep(1 / CALLS_PER_SECOND)
-        logging.info("video info: %s/%s", i, len(video_ids))
-
-    return videos
-
-
-def output_status(torrents: List[lt.torrent_handle], output_file: TextIOBase):
-    # Generate rows from ordered headers and their getter functions
-    torrent_stati = []
-    for torrent in torrents:
-        status: lt.torrent_status = torrent.status()
-        torrent_stati.append(
-            [
-                getter(status)
-                for getter in OUTPUT_HEADERS.values()
-            ]
-        )
-
-    # The file handle stays open, so we can't just keep appending
-    # Some files however are append-only e.g stderr
-    if output_file.seekable():
-        output_file.truncate(0)
-
-    output_file.write(tabulate(torrent_stati, list(OUTPUT_HEADERS.keys())))
-    output_file.write("\n")  # Append only files would otherwise mess up the first header line
-
-    output_file.flush()
-
-
-class CommaSeparatedOption(object):
-    def __init__(self, options: List[str]):
-        self.options = options
-
-    def __call__(self, string: str) -> List[str]:
-        result = []
-        for separated in string.split(","):
-            separated = separated.strip()
-            if separated not in self.options:
-                raise argparse.ArgumentTypeError("Option is not allowed")
-            result.append(separated)
-
-        return result
 
 
 if __name__ == "__main__":
