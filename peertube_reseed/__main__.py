@@ -27,11 +27,19 @@ CALLS_PER_SECOND = 2.5
 """For rate limiting"""
 
 SORT_OPTIONS = [
+    "hot",
     "trending",
     "likes",
     "views",
+    "createdAt",
+    "publishedAt",
+    "name",
+    "duration",
 ]
-"""Which sort of video the user can pick to reseed"""
+"""
+Which sort of video the user can pick to reseed
+List taken from https://docs.joinpeertube.org/api-rest-reference.html#operation/getVideos
+"""
 
 OUTPUT_HEADERS: typing.OrderedDict[
     str,
@@ -164,6 +172,7 @@ def get_videos(client: Session, count: int, sorts: List[str] = None) -> list:
     sort_strings = list(reversed(sorts if sorts else SORT_OPTIONS))
     while len(video_ids) < count and len(sort_strings) > 0:
         sort = sort_strings.pop()
+        logging.info("Retrieving videos of sort: %s", sort)
         result = client.get(
             "videos", params={
                 "sort": f"-{sort}",

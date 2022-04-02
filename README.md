@@ -40,8 +40,10 @@ optional arguments:
   --version             Print the version number
   -s SORTS, --sorts SORTS
                         Which sort of video to reseed, in descending priority.
-                        Allowed options trending,likes,views (default:
-                        ['trending', 'likes', 'views'])
+                        Allowed options hot,trending,likes,views,createdAt,pub
+                        lishedAt,name,duration (default: ['hot', 'trending',
+                        'likes', 'views', 'createdAt', 'publishedAt', 'name',
+                        'duration'])
   --active-downloads ACTIVE_DOWNLOADS
                         Number torrents to download at the same time. Each
                         torrent has one video file in a specific resolution. A
@@ -57,11 +59,6 @@ optional arguments:
   -d DOWNLOAD_PATH, --download-path DOWNLOAD_PATH
                         Download dir of all videos (default: /tmp/peertube-
                         reseed)
-peertube-reseed-js_reseed_1 exited with code 0
-Aborting on container exit...
-
-Process finished with exit code 0
-
 ```
 
 **Example**
