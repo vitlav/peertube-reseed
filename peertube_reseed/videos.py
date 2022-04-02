@@ -17,7 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 import logging
 from time import sleep
-from typing import List
+from typing import Dict, List
 
 from requests_toolbelt.sessions import BaseUrlSession
 
@@ -38,7 +38,6 @@ def get_videos(client: BaseUrlSession, count: int, sorts: List[str] = None) -> l
                 "sort": f"-{sort}",
                 # nsfw: true,
                 "count": count,
-                "hasWebtorrentFiles": True
             }
         ).json()
 
@@ -58,3 +57,35 @@ def get_videos(client: BaseUrlSession, count: int, sorts: List[str] = None) -> l
         logging.info("video info: %s/%s", i, len(video_ids))
 
     return videos
+
+
+def get_video_file_urls(video: dict) -> Dict[str, str]:
+    """
+    Get the urls to download the .torrent files for a video
+
+    The result may be empty
+
+    :param video: result from https://docs.joinpeertube.org/api-rest-reference.html#operation/getVideo
+    :return: key: torrent label, value: url to torrent
+    """
+    return {
+        label: torrent_url
+        for _file in video.get("files", [])
+        if (label := _file.get("resolution", {}).get("label")) and
+           (torrent_url := _file.get("torrentDownloadUrl"))
+    }
+
+
+def get_video_stream_file_urls(video: dict) -> Dict[int, Dict[str, str]]:
+    """
+    Get the URLs to the .torrent files for each playlist to play a video
+
+    The result may be empty
+
+    :param video: result from https://docs.joinpeertube.org/api-rest-reference.html#operation/getVideo
+    """
+    return {
+        playlist_id: urls
+        for playlist in video.get("streamingPlaylists", [])
+        if (urls := get_video_file_urls(playlist)) and (playlist_id := playlist.get("id"))
+    }

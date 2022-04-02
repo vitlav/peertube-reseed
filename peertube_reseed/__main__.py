@@ -19,8 +19,8 @@ from peertube_reseed.cli import CommaSeparatedOption
 from peertube_reseed.constants import SORT_OPTIONS
 from peertube_reseed.files import list_dirs
 from peertube_reseed.logs import output_status
-from peertube_reseed.videos import get_videos
-from peertube_reseed.web import download_file
+from peertube_reseed.videos import get_video_file_urls, get_video_stream_file_urls, get_videos
+from peertube_reseed.web import make_torrent_params
 
 
 def main(
@@ -50,25 +50,9 @@ def main(
         video_download_path.mkdir(parents=True, exist_ok=True)
         video_download_paths.add(video_download_path)
 
-        for file in video["files"]:
-            torrent_url = file.get("torrentDownloadUrl")
-            if not torrent_url:
-                logging.warning("No torrent URL for %s", file)
-                continue
-            try:
-                # libtorrent doesn't support downloading the file for us so we do it ourselves
-                torrent_path = download_file(torrent_url)
-            except Exception as e:
-                logging.error("Couldn't download torrent from %s : %s", torrent_url, e)
-                continue
-
-            file_dir_download_path = video_download_path / file["resolution"]["label"]
-            torrent_params.append(
-                {
-                    "ti": lt.torrent_info(str(torrent_path)),
-                    "save_path": str(file_dir_download_path)
-                }
-            )
+        torrent_params.extend(make_torrent_params(get_video_file_urls(video), video_download_path / "video"))
+        for playlist_id, urls in get_video_stream_file_urls(video).items():
+            torrent_params.extend(make_torrent_params(urls, video_download_path / ("playlist_%s" % playlist_id)))
 
     # Create a session that can download and seed all the torrents
     file_count = len(torrent_params)
