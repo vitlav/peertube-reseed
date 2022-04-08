@@ -1,3 +1,5 @@
+**Development has stalled because there is currently [no _easy_ way to contribute bandwidth to peertube instances using HLS](https://github.com/Chocobozzz/PeerTube/issues/4895)**
+
 `peertube-reseed` is an attempt at writing a... well... reseeder for peertube.
 
 It reseeds a given number of trending videos.
